@@ -789,14 +789,18 @@
 
       <div>
         <div class="section-label">Comment Strategy</div>
-        <div class="type-toggle">
-          <div class="type-btn active" data-type="direct" onclick="setType('direct', this)">
-            💬 Direct Rec.
+        <div class="type-toggle" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="type-btn" data-type="direct" onclick="setType('direct', this)">
+            💬 Direct
           </div>
           <div class="type-btn" data-type="competitor" onclick="setType('competitor', this)">
-            ⚖️ Competitor Compare
+            ⚖️ Compare
+          </div>
+          <div class="type-btn active" data-type="auto" onclick="setType('auto', this)">
+            ✨ Auto
           </div>
         </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px;" id="strategyHint">AI reads the thread and picks the best strategy</div>
       </div>
 
       <div class="comp-section" id="compSection">
@@ -896,7 +900,7 @@
 // CONFIG
 // ══════════════════════════════════════
 const DEFAULT_ACCESS_CODE = '3503';
-const DEFAULT_ADMIN_CODE  = 'admin3503'; // change this to your private admin password
+const DEFAULT_ADMIN_CODE  = 'admin3503';
 
 // ══════════════════════════════════════
 // LOCK SCREEN
@@ -1121,11 +1125,18 @@ function setLength(len, el) {
   document.getElementById('lengthHint').textContent = LENGTH_CONFIG[len].label;
 }
 
+const STRATEGY_HINTS = {
+  direct:     'Weave HostNow in naturally as a personal recommendation',
+  competitor: 'Compare competitors fairly, then land on HostNow',
+  auto:       'AI reads the thread and picks the best strategy',
+};
+
 function setType(type, el) {
   commentType = type;
   document.querySelectorAll('.type-btn[data-type]').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('compSection').classList.toggle('visible', type === 'competitor');
+  document.getElementById('strategyHint').textContent = STRATEGY_HINTS[type];
 }
 
 function setVariants(v, el) {
@@ -1152,13 +1163,13 @@ PROS:\n${d.pros.map(p => '- ' + p).join('\n')}
 CONS:\n${d.cons.map(c => '- ' + c).join('\n')}`;
   }).join('\n\n');
 
-  const typeInstructions = type === 'direct'
-    ? `## Strategy: Direct Recommendation
+  const directInstructions = `## Strategy: Direct Recommendation
 Weave HostNow naturally mid-comment — framed as a personal past-customer find.
 Do NOT open with HostNow. Establish context and credibility first.
 Do NOT close with HostNow as a hard sell — leave it as a casual mention.
-The comment should feel like a real person sharing experience, not an ad.`
-    : `## Strategy: Competitor Comparison
+The comment should feel like a real person sharing experience, not an ad.`;
+
+  const competitorInstructions = `## Strategy: Competitor Comparison
 Structure:
 1. Open by engaging naturally with the thread question — show you understand the situation
 2. Acknowledge the relevant competitors — give 1–2 genuine pros for each (be fair)
@@ -1168,6 +1179,21 @@ Structure:
 
 Competitor data to draw from:
 ${compContext}`;
+
+  const autoInstructions = `## Strategy: Auto-select
+Read the thread carefully and decide which strategy fits best:
+
+- Use COMPETITOR COMPARISON if: the OP mentions specific companies (Vacasa, Evolve, AvantStay, Awning, etc.), is comparing options, asking which manager to go with, or complaining about a specific company.
+- Use DIRECT RECOMMENDATION if: the OP is asking general advice about STR management, venting about self-managing, asking about fees, or not referencing specific competitors.
+
+If you use competitor comparison, draw from this data:
+${compContext}
+
+Whichever strategy you pick, follow its rules exactly. Do not mention which strategy you chose.`;
+
+  const typeInstructions = type === 'direct' ? directInstructions
+    : type === 'competitor' ? competitorInstructions
+    : autoInstructions;
 
   return `You draft Reddit comments for HostNow AI, a boutique short-term rental (STR) management company. These read as organic peer recommendations from a real Airbnb host.
 
@@ -1255,9 +1281,9 @@ async function generate() {
   document.getElementById('generateBtn').disabled = true;
 
   const selectedComps = getSelectedComps();
-  const typeLabel = commentType === 'direct'
-    ? 'Direct Recommendation'
-    : `Competitor Compare · ${selectedComps.map(c => COMPETITOR_DATA[c].name).join(', ')}`;
+  const typeLabel = commentType === 'direct' ? 'Direct Recommendation'
+    : commentType === 'competitor' ? `Competitor Compare · ${selectedComps.map(c => COMPETITOR_DATA[c].name).join(', ')}`
+    : 'Auto';
 
   const userPrompt = `Thread context:\n${thread}${extra ? '\n\nExtra context: ' + extra : ''}
 
