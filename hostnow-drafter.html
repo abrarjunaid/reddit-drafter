@@ -678,6 +678,29 @@
 </div>
 
 <!-- ══════════════════════════════════════
+     ADMIN LOCK MODAL
+══════════════════════════════════════ -->
+<div id="adminLockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;align-items:center;justify-content:center;">
+  <div class="lock-card" style="width:340px;">
+    <div class="lock-logo" style="width:40px;height:40px;font-size:20px;margin-bottom:16px;">🔐</div>
+    <div class="lock-title" style="font-size:16px;margin-bottom:4px;">Admin Access</div>
+    <div class="lock-sub" style="margin-bottom:22px;">Settings are restricted. Enter the admin password to continue.</div>
+    <input
+      class="lock-input"
+      id="adminCodeInput"
+      type="password"
+      placeholder="· · · · · ·"
+      maxlength="30"
+      autocomplete="off"
+      onkeydown="if(event.key==='Enter') verifyAdmin()"
+    />
+    <button class="lock-btn" onclick="verifyAdmin()">Continue</button>
+    <div class="lock-error" id="adminLockError"></div>
+    <button onclick="closeAdminLock()" style="margin-top:14px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      SETTINGS MODAL
 ══════════════════════════════════════ -->
 <div id="settingsModal">
@@ -702,9 +725,18 @@
 
       <!-- Access Code -->
       <div class="settings-field">
-        <label>Change Access Code</label>
+        <label>Change User Access Code</label>
         <input class="settings-input" type="password" id="settingsNewCode" placeholder="New access code" autocomplete="off" />
-        <p>Leave blank to keep your current code unchanged.</p>
+        <p>This is the code you share with your team. Leave blank to keep unchanged.</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Admin Password -->
+      <div class="settings-field">
+        <label>Change Admin Password</label>
+        <input class="settings-input" type="password" id="settingsNewAdmin" placeholder="New admin password" autocomplete="off" />
+        <p>Protects this Settings page. Keep this private — don't share with freelancers or students.</p>
       </div>
 
     </div>
@@ -861,9 +893,10 @@
 
 <script>
 // ══════════════════════════════════════
-// CONFIG — change the default access code here
+// CONFIG
 // ══════════════════════════════════════
 const DEFAULT_ACCESS_CODE = '3503';
+const DEFAULT_ADMIN_CODE  = 'admin3503'; // change this to your private admin password
 
 // ══════════════════════════════════════
 // LOCK SCREEN
@@ -892,13 +925,55 @@ function unlock() {
 }
 
 // ══════════════════════════════════════
+// ADMIN LOCK
+// ══════════════════════════════════════
+function getAdminCode() {
+  return localStorage.getItem('hn_admin_code') || DEFAULT_ADMIN_CODE;
+}
+
+function openSettings() {
+  // Show admin lock first
+  const modal = document.getElementById('adminLockModal');
+  document.getElementById('adminCodeInput').value = '';
+  document.getElementById('adminLockError').textContent = '';
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('adminCodeInput').focus(), 50);
+}
+
+function closeAdminLock() {
+  document.getElementById('adminLockModal').style.display = 'none';
+}
+
+function verifyAdmin() {
+  const input = document.getElementById('adminCodeInput');
+  if (input.value.trim() === getAdminCode()) {
+    closeAdminLock();
+    _openSettingsModal();
+  } else {
+    const errEl = document.getElementById('adminLockError');
+    errEl.textContent = 'Incorrect password.';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => {
+      input.classList.remove('error');
+      errEl.textContent = '';
+    }, 1500);
+  }
+}
+
+// Close admin lock on backdrop click
+document.getElementById('adminLockModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAdminLock();
+});
+
+// ══════════════════════════════════════
 // SETTINGS
 // ══════════════════════════════════════
-function openSettings() {
-  const modal = document.getElementById('settingsModal');
+function _openSettingsModal() {
   document.getElementById('settingsApiKey').value = localStorage.getItem('hn_api_key') || '';
   document.getElementById('settingsNewCode').value = '';
-  modal.classList.add('open');
+  document.getElementById('settingsNewAdmin').value = '';
+  document.getElementById('settingsModal').classList.add('open');
 }
 
 function closeSettings() {
@@ -906,13 +981,15 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  const apiKey = document.getElementById('settingsApiKey').value.trim();
-  const newCode = document.getElementById('settingsNewCode').value.trim();
+  const apiKey   = document.getElementById('settingsApiKey').value.trim();
+  const newCode  = document.getElementById('settingsNewCode').value.trim();
+  const newAdmin = document.getElementById('settingsNewAdmin').value.trim();
 
   if (apiKey) localStorage.setItem('hn_api_key', apiKey);
   else localStorage.removeItem('hn_api_key');
 
-  if (newCode) localStorage.setItem('hn_access_code', newCode);
+  if (newCode)  localStorage.setItem('hn_access_code', newCode);
+  if (newAdmin) localStorage.setItem('hn_admin_code', newAdmin);
 
   updateApiStatus();
 
