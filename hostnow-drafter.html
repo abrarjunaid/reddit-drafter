@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HostNow Reddit Drafter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f11;
+    --surface: #1a1a1e;
+    --surface2: #222228;
+    --border: #2e2e38;
+    --accent: #7c5cfc;
+    --accent-dim: #5a3fd4;
+    --accent-glow: rgba(124, 92, 252, 0.18);
+    --text: #e8e8f0;
+    --muted: #7a7a90;
+    --danger: #f87171;
+    --green: #4ade80;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Lock Screen ── */
+  #lockScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .lock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 40px 44px;
+    width: 360px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .lock-logo {
+    width: 52px; height: 52px;
+    background: var(--accent);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    margin-bottom: 20px;
+  }
+
+  .lock-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+
+  .lock-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  .lock-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    text-align: center;
+    letter-spacing: 3px;
+    font-family: monospace;
+    transition: border-color 0.15s;
+    margin-bottom: 12px;
+  }
+  .lock-input:focus { border-color: var(--accent); }
+  .lock-input.error { border-color: var(--danger); animation: shake 0.3s ease; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .lock-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 0;
+  }
+  .lock-btn:hover { background: var(--accent-dim); }
+
+  .lock-error {
+    font-size: 12.5px;
+    color: var(--danger);
+    margin-top: 10px;
+    height: 16px;
+    text-align: center;
+  }
+
+  /* ── Settings Modal ── */
+  #settingsModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+  }
+  #settingsModal.open { display: flex; }
+
+  .settings-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    width: 460px;
+    overflow: hidden;
+    animation: fadeUp 0.2s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .settings-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+  .settings-header h2 { font-size: 15px; font-weight: 600; }
+
+  .settings-close {
+    width: 30px; height: 30px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 16px;
+    transition: all 0.15s;
+  }
+  .settings-close:hover { color: var(--text); border-color: var(--accent); }
+
+  .settings-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .settings-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .settings-field p {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  .settings-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .settings-input:focus { border-color: var(--accent); }
+
+  .settings-input-row {
+    display: flex;
+    gap: 8px;
+  }
+  .settings-input-row .settings-input { flex: 1; }
+
+  .settings-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: var(--surface2);
+  }
+
+  .btn-cancel {
+    padding: 9px 18px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-cancel:hover { color: var(--text); border-color: var(--accent); }
+
+  .btn-save {
+    padding: 9px 22px;
+    border-radius: 9px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-save:hover { background: var(--accent-dim); }
+
+  .saved-toast {
+    font-size: 12px;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    margin-right: auto;
+    align-self: center;
+  }
+  .saved-toast.show { opacity: 1; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+  }
+
+  .danger-zone label {
+    color: var(--danger) !important;
+  }
+
+  .btn-danger {
+    padding: 9px 16px;
+    border-radius: 9px;
+    border: 1px solid rgba(248,113,113,0.3);
+    background: rgba(248,113,113,0.08);
+    color: var(--danger);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-danger:hover { background: rgba(248,113,113,0.15); }
+
+  /* ── Header ── */
+  header {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--surface);
+  }
+  .logo {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  header span { font-size: 12px; color: var(--muted); margin-left: 4px; }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .settings-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.15s;
+  }
+  .settings-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  .api-status {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+  .status-dot.connected { background: var(--green); }
+
+  /* ── Layout ── */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    overflow: hidden;
+    height: calc(100vh - 61px);
+  }
+
+  /* ── Left Panel ── */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 22px;
+    gap: 18px;
+    background: var(--surface);
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 13.5px;
+    line-height: 1.6;
+    padding: 11px 13px;
+    resize: vertical;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+
+  .type-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .type-btn {
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .type-btn:hover { border-color: var(--accent); color: var(--text); }
+  .type-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .competitor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .comp-chip {
+    padding: 8px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .comp-chip:hover { border-color: var(--accent); color: var(--text); }
+  .comp-chip.selected {
+    background: var(--accent-glow);
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .comp-chip .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .comp-chip.selected .dot { background: var(--accent); }
+
+  .comp-section { display: none; }
+  .comp-section.visible { display: block; }
+
+  .generate-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .generate-btn:hover { background: var(--accent-dim); }
+  .generate-btn:active { transform: scale(0.98); }
+  .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .output-header {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+  }
+  .output-header h2 { font-size: 14px; font-weight: 600; }
+
+  .btn-sm {
+    padding: 6px 13px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-sm:hover { background: var(--surface2); border-color: var(--accent); }
+  .btn-sm.copied { border-color: var(--green); color: var(--green); }
+
+  .output-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    text-align: center;
+    height: 100%;
+  }
+  .empty-icon { font-size: 38px; opacity: 0.35; }
+  .empty-state p { font-size: 13.5px; line-height: 1.6; max-width: 260px; }
+
+  .comment-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    animation: fadeUp 0.22s ease;
+  }
+
+  .comment-card-header {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid rgba(124,92,252,0.3);
+  }
+  .word-count { font-size: 12px; color: var(--muted); }
+
+  .comment-text {
+    padding: 18px 20px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .comment-footer {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    background: var(--surface2);
+  }
+
+  .loading-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13.5px; color: var(--muted); }
+
+  .error-card {
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 13.5px;
+    color: var(--danger);
+    line-height: 1.6;
+  }
+
+  .tips {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 14px 16px;
+  }
+  .tips h3 { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 9px; }
+  .tips ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .tips li { font-size: 12.5px; color: var(--muted); display: flex; gap: 8px; }
+  .tips li::before { content: "·"; color: var(--accent); font-weight: bold; }
+
+  .history-strip {
+    padding: 8px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    background: var(--surface);
+    min-height: 42px;
+    align-items: center;
+  }
+  .history-strip::-webkit-scrollbar { display: none; }
+  .history-pill {
+    padding: 3px 11px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .history-pill:hover { border-color: var(--accent); color: var(--text); }
+  .history-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* show/hide app */
+  #app { display: none; flex-direction: column; height: 100vh; }
+  #app.visible { display: flex; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LOCK SCREEN
+══════════════════════════════════════ -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-logo">🏠</div>
+    <div class="lock-title">HostNow Drafter</div>
+    <div class="lock-sub">Enter your access code to continue</div>
+    <input
+      class="lock-input"
+      id="lockInput"
+      type="password"
+      placeholder="· · · · · ·"
+      maxlength="20"
+      autocomplete="off"
+      onkeydown="if(event.key==='Enter') unlock()"
+    />
+    <button class="lock-btn" onclick="unlock()">Unlock</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SETTINGS MODAL
+══════════════════════════════════════ -->
+<div id="settingsModal">
+  <div class="settings-card">
+    <div class="settings-header">
+      <h2>⚙️ Settings</h2>
+      <div class="settings-close" onclick="closeSettings()">✕</div>
+    </div>
+    <div class="settings-body">
+
+      <!-- API Key -->
+      <div class="settings-field">
+        <label>Claude API Key</label>
+        <div class="settings-input-row">
+          <input class="settings-input" type="password" id="settingsApiKey" placeholder="sk-ant-..." />
+          <button class="btn-sm" onclick="toggleApiVis()" id="visBtn" style="white-space:nowrap;padding:0 14px;">Show</button>
+        </div>
+        <p>Get yours at console.anthropic.com → API Keys. Saved locally in your browser — never sent anywhere except Anthropic.</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Access Code -->
+      <div class="settings-field">
+        <label>Change Access Code</label>
+        <input class="settings-input" type="password" id="settingsNewCode" placeholder="New access code" autocomplete="off" />
+        <p>Leave blank to keep your current code unchanged.</p>
+      </div>
+
+    </div>
+    <div class="settings-footer">
+      <div class="saved-toast" id="savedToast">✓ Saved</div>
+      <button class="btn-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Header -->
+  <header>
+    <div class="logo">🏠</div>
+    <div>
+      <h1>HostNow Reddit Drafter <span>affiliate comment tool</span></h1>
+    </div>
+    <div class="header-right">
+      <div class="api-status">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusLabel">No API key</span>
+      </div>
+      <button class="settings-btn" onclick="openSettings()">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+        Settings
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="workspace">
+
+    <!-- Left: Controls -->
+    <div class="left-panel">
+
+      <div>
+        <div class="section-label">Reddit Thread</div>
+        <textarea id="threadInput" rows="7"
+          placeholder="Paste the Reddit post title + body here, or just describe what the thread is asking about..."
+          onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))generate()"></textarea>
+      </div>
+
+      <div>
+        <div class="section-label">Comment Strategy</div>
+        <div class="type-toggle">
+          <div class="type-btn active" data-type="direct" onclick="setType('direct', this)">
+            💬 Direct Rec.
+          </div>
+          <div class="type-btn" data-type="competitor" onclick="setType('competitor', this)">
+            ⚖️ Competitor Compare
+          </div>
+        </div>
+      </div>
+
+      <div class="comp-section" id="compSection">
+        <div class="section-label">Competitors to mention</div>
+        <div class="competitor-grid">
+          <div class="comp-chip selected" data-comp="vacasa" onclick="toggleComp(this)">
+            <span class="dot"></span> Vacasa
+          </div>
+          <div class="comp-chip" data-comp="evolve" onclick="toggleComp(this)">
+            <span class="dot"></span> Evolve
+          </div>
+          <div class="comp-chip" data-comp="avantstay" onclick="toggleComp(this)">
+            <span class="dot"></span> AvantStay
+          </div>
+          <div class="comp-chip" data-comp="awning" onclick="toggleComp(this)">
+            <span class="dot"></span> Awning
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Extra Context (optional)</div>
+        <textarea id="extraContext" rows="3"
+          placeholder="e.g. OP is in Florida, frustrated with high fees, first-time host..."></textarea>
+      </div>
+
+      <div>
+        <div class="section-label">Response Length</div>
+        <div class="type-toggle" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+          <div class="type-btn active" data-len="short" onclick="setLength('short', this)">Short</div>
+          <div class="type-btn" data-len="medium" onclick="setLength('medium', this)">Medium</div>
+          <div class="type-btn" data-len="long" onclick="setLength('long', this)">Long</div>
+          <div class="type-btn" data-len="auto" onclick="setLength('auto', this)">Auto</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px;" id="lengthHint">~80–130 words · quick punchy reply</div>
+      </div>
+
+      <div>
+        <div class="section-label">Variants to generate</div>
+        <div class="type-toggle" style="grid-template-columns:1fr 1fr 1fr;">
+          <div class="type-btn active" data-v="1" onclick="setVariants('1', this)">1</div>
+          <div class="type-btn" data-v="2" onclick="setVariants('2', this)">2</div>
+          <div class="type-btn" data-v="3" onclick="setVariants('3', this)">3</div>
+        </div>
+      </div>
+
+      <button class="generate-btn" id="generateBtn" onclick="generate()">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Generate Comment
+      </button>
+
+      <div class="tips">
+        <h3>Active guidelines</h3>
+        <ul>
+          <li>150–300 words · casual lowercase</li>
+          <li>HostNow woven in mid-comment naturally</li>
+          <li>No links · no double dashes · no lists</li>
+          <li>Humanizer pass applied automatically</li>
+          <li>~15% fee · no setup fee · no lock-in</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Right: Output -->
+    <div class="right-panel">
+      <div class="output-header">
+        <h2>Generated Comments</h2>
+        <button class="btn-sm" onclick="clearOutput()">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Clear
+        </button>
+      </div>
+
+      <div class="history-strip" id="historyStrip">
+        <span class="history-label">History:</span>
+        <span style="font-size:12px;color:var(--muted)">No generations yet</span>
+      </div>
+
+      <div class="output-body" id="outputBody">
+        <div class="empty-state">
+          <div class="empty-icon">✍️</div>
+          <p>Paste a Reddit thread on the left and hit Generate to draft your comment.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG — change the default access code here
+// ══════════════════════════════════════
+const DEFAULT_ACCESS_CODE = '3503';
+
+// ══════════════════════════════════════
+// LOCK SCREEN
+// ══════════════════════════════════════
+function getAccessCode() {
+  return localStorage.getItem('hn_access_code') || DEFAULT_ACCESS_CODE;
+}
+
+function unlock() {
+  const input = document.getElementById('lockInput');
+  const val = input.value.trim();
+  if (val === getAccessCode()) {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    updateApiStatus();
+  } else {
+    const errEl = document.getElementById('lockError');
+    errEl.textContent = 'Incorrect access code. Try again.';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => {
+      input.classList.remove('error');
+      errEl.textContent = '';
+    }, 1500);
+  }
+}
+
+// ══════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════
+function openSettings() {
+  const modal = document.getElementById('settingsModal');
+  document.getElementById('settingsApiKey').value = localStorage.getItem('hn_api_key') || '';
+  document.getElementById('settingsNewCode').value = '';
+  modal.classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+}
+
+function saveSettings() {
+  const apiKey = document.getElementById('settingsApiKey').value.trim();
+  const newCode = document.getElementById('settingsNewCode').value.trim();
+
+  if (apiKey) localStorage.setItem('hn_api_key', apiKey);
+  else localStorage.removeItem('hn_api_key');
+
+  if (newCode) localStorage.setItem('hn_access_code', newCode);
+
+  updateApiStatus();
+
+  const toast = document.getElementById('savedToast');
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+    closeSettings();
+  }, 1200);
+}
+
+function toggleApiVis() {
+  const inp = document.getElementById('settingsApiKey');
+  const btn = document.getElementById('visBtn');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = 'Hide';
+  } else {
+    inp.type = 'password';
+    btn.textContent = 'Show';
+  }
+}
+
+function updateApiStatus() {
+  const key = localStorage.getItem('hn_api_key');
+  const dot = document.getElementById('statusDot');
+  const label = document.getElementById('statusLabel');
+  if (key && key.startsWith('sk-')) {
+    dot.classList.add('connected');
+    label.textContent = 'API key connected';
+  } else {
+    dot.classList.remove('connected');
+    label.textContent = 'No API key — open Settings';
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('settingsModal').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+// ══════════════════════════════════════
+// COMPETITOR DATA
+// ══════════════════════════════════════
+const COMPETITOR_DATA = {
+  vacasa: {
+    name: "Vacasa",
+    fee: "~25–35% (commonly ~30%)",
+    pros: [
+      "widest geographic reach and brand recognition",
+      "full-service — cleaning, maintenance, guest support all handled",
+      "local on-the-ground teams in many markets"
+    ],
+    cons: [
+      "high fees significantly eat into owner net yield, especially in shoulder seasons",
+      "inconsistent service quality — cleaning and maintenance complaints vary by market",
+      "hidden or extra fees often added, reducing transparency",
+      "listings under Vacasa's account — if you leave, you lose all accumulated reviews",
+      "owners often feel like a small fish in a very big pond"
+    ]
+  },
+  evolve: {
+    name: "Evolve",
+    fee: "~10% (marketing/booking support only — not full service)",
+    pros: [
+      "lowest fee among major players at around 10%",
+      "solid listing, marketing, and channel distribution",
+      "good dynamic pricing and booking management"
+    ],
+    cons: [
+      "not actually full-service — owner must handle cleaning, maintenance, turnover, restocking, and check-in/out independently",
+      "mixed reviews: hosts report unexpected charges, service mismatches, and poor communication",
+      "some hosts report major losses from cancellations and chargebacks making earnings go negative",
+      "if you switch away from Evolve, you lose all accumulated reviews and booking history"
+    ]
+  },
+  avantstay: {
+    name: "AvantStay",
+    fee: "~20–30% (varies, plus potential add-ons)",
+    pros: [
+      "premium, luxury-oriented management with high-touch guest experience",
+      "smart-home tech integration and concierge-style guest services",
+      "strong focus on group-stay and high-end properties"
+    ],
+    cons: [
+      "high minimum property standards — small apartments or average properties typically don't qualify",
+      "pricing and contract terms are opaque, difficult to forecast net returns without a detailed quote",
+      "limited market coverage compared to larger national operators",
+      "high turnover and furnishing costs can offset the benefits for many owners"
+    ]
+  },
+  awning: {
+    name: "Awning",
+    fee: "~15% base (cleaning, maintenance, and vendor costs often extra)",
+    pros: [
+      "competitive base fee around 15%",
+      "full-service scope including listing, dynamic pricing, guest comms, and maintenance coordination",
+      "decent host support and turnover management"
+    ],
+    cons: [
+      "service quality varies heavily by geography — outside major metros, responsiveness can be weak",
+      "the low base fee is misleading — add-on fees for cleaning, maintenance, and guest-related costs can make the effective cost much higher",
+      "limited coverage in quieter or secondary markets, where ROI can suffer",
+      "switching means losing your review history like the other big players"
+    ]
+  }
+};
+
+// ══════════════════════════════════════
+// UI STATE
+// ══════════════════════════════════════
+let commentType = 'direct';
+let variants = 1;
+let responseLength = 'short';
+let generating = false;
+let history = [];
+
+const LENGTH_CONFIG = {
+  short:  { label: '~80–130 words · quick punchy reply',   instruction: 'Keep the comment SHORT: 80–130 words maximum. Be punchy and direct. Get in, make the point, get out.' },
+  medium: { label: '~150–220 words · standard comment',    instruction: 'Keep the comment MEDIUM length: 150–220 words. Standard Reddit comment — enough context to be credible without overstaying.' },
+  long:   { label: '~250–350 words · detailed response',   instruction: 'Write a LONGER comment: 250–350 words. More context, more nuance, reads like someone who really knows this space.' },
+  auto:   { label: 'AI picks the best length for the thread', instruction: 'Choose the most natural length for the thread — shorter for simple questions, longer for detailed discussions. Aim for 100–300 words.' },
+};
+
+function setLength(len, el) {
+  responseLength = len;
+  document.querySelectorAll('.type-btn[data-len]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('lengthHint').textContent = LENGTH_CONFIG[len].label;
+}
+
+function setType(type, el) {
+  commentType = type;
+  document.querySelectorAll('.type-btn[data-type]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('compSection').classList.toggle('visible', type === 'competitor');
+}
+
+function setVariants(v, el) {
+  variants = parseInt(v);
+  document.querySelectorAll('.type-btn[data-v]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleComp(el) { el.classList.toggle('selected'); }
+
+function getSelectedComps() {
+  return Array.from(document.querySelectorAll('.comp-chip.selected')).map(el => el.dataset.comp);
+}
+
+// ══════════════════════════════════════
+// PROMPT BUILDER
+// ══════════════════════════════════════
+function buildSystemPrompt(type, selectedComps, len) {
+  const lengthInstruction = LENGTH_CONFIG[len].instruction;
+  const compContext = selectedComps.map(c => {
+    const d = COMPETITOR_DATA[c];
+    return `## ${d.name} (fee: ${d.fee})
+PROS:\n${d.pros.map(p => '- ' + p).join('\n')}
+CONS:\n${d.cons.map(c => '- ' + c).join('\n')}`;
+  }).join('\n\n');
+
+  const typeInstructions = type === 'direct'
+    ? `## Strategy: Direct Recommendation
+Weave HostNow naturally mid-comment — framed as a personal past-customer find.
+Do NOT open with HostNow. Establish context and credibility first.
+Do NOT close with HostNow as a hard sell — leave it as a casual mention.
+The comment should feel like a real person sharing experience, not an ad.`
+    : `## Strategy: Competitor Comparison
+Structure:
+1. Open by engaging naturally with the thread question — show you understand the situation
+2. Acknowledge the relevant competitors — give 1–2 genuine pros for each (be fair)
+3. Mention 1–2 real limitations per competitor (fees, review loss on exit, not truly full-service, etc.)
+4. Transition naturally into HostNow — frame it as what you ended up going with
+5. Keep the HostNow mention proportional — part of the comparison, not a sales closer
+
+Competitor data to draw from:
+${compContext}`;
+
+  return `You draft Reddit comments for HostNow AI, a boutique short-term rental (STR) management company. These read as organic peer recommendations from a real Airbnb host.
+
+## HostNow AI Facts
+- Website: hostnow.ai
+- Fee: ~15% of rental revenue (no setup fee, no long-term contract, optional 1-month trial)
+- Services: listing optimization, dynamic pricing, multi-channel distribution (Airbnb, Booking.com etc.), 24/7 guest communications, booking & calendar management, local vendor coordination for cleaning & maintenance, owner dashboard, WhatsApp access, AI pricing tools
+- Positioning: boutique, owner retains control, less corporate than Vacasa/AvantStay, more hands-on than Evolve
+
+## Hard Rules
+- ${lengthInstruction}
+- Casual, lowercase, peer-to-peer Reddit tone
+- No links ever
+- No double dashes (--)
+- No overselling HostNow — weave it in subtly
+- Frame as personal recommendation ("stumbled onto", "ended up going with", "found through a recommendation")
+- No emojis
+- No bullet points or lists — flowing prose only
+- Vary sentence length — short punchy ones mixed with longer ones
+- Write in first person where natural
+
+## Banned Words / Phrases
+testament, pivotal, landscape, vibrant, crucial, delve, foster, underscore, showcase, enhance, holistic, seamless, streamline, elevate, empower, game-changer, innovative, robust, leverage, cutting-edge, at its core, let's dive in, here's what you need to know, the future looks bright, hope this helps
+
+## No AI Formatting
+- No em dashes
+- No bold or italics
+- No headers or sections
+- No signposting ("first...", "secondly...", "in conclusion...")
+- No generic positive endings
+
+## Humanizer Self-Check (apply before finalising)
+Ask: would this pass as a real Reddit comment from a host?
+- Any sentence too polished or structured?
+- Any phrase that sounds like marketing copy?
+- Any banned words remaining?
+- Does the HostNow mention feel natural vs. forced?
+Revise anything that fails.
+
+${typeInstructions}`;
+}
+
+// ══════════════════════════════════════
+// API
+// ══════════════════════════════════════
+async function callClaude(systemPrompt, userPrompt, apiKey) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 900,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.content?.[0]?.text?.trim() || '';
+}
+
+// ══════════════════════════════════════
+// GENERATE
+// ══════════════════════════════════════
+async function generate() {
+  if (generating) return;
+
+  const thread = document.getElementById('threadInput').value.trim();
+  const extra = document.getElementById('extraContext').value.trim();
+  const apiKey = localStorage.getItem('hn_api_key') || '';
+
+  if (!thread) { showError('Paste a Reddit thread or describe the question first.'); return; }
+  if (!apiKey) { showError('Add your Claude API key in Settings (top right).'); return; }
+
+  generating = true;
+  document.getElementById('generateBtn').disabled = true;
+
+  const selectedComps = getSelectedComps();
+  const typeLabel = commentType === 'direct'
+    ? 'Direct Recommendation'
+    : `Competitor Compare · ${selectedComps.map(c => COMPETITOR_DATA[c].name).join(', ')}`;
+
+  const userPrompt = `Thread context:\n${thread}${extra ? '\n\nExtra context: ' + extra : ''}
+
+Draft ${variants} Reddit comment${variants > 1 ? 's' : ''} for this thread.${variants > 1 ? ' Separate each with ---' : ''} Each should feel like a different angle or voice.`;
+
+  const outputBody = document.getElementById('outputBody');
+  const emptyState = outputBody.querySelector('.empty-state');
+  if (emptyState) emptyState.remove();
+
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'loading-card';
+  loadingEl.innerHTML = `<div class="spinner"></div><div class="loading-text">Drafting${variants > 1 ? ' ' + variants + ' variants' : ''}...</div>`;
+  outputBody.insertBefore(loadingEl, outputBody.firstChild);
+
+  try {
+    const result = await callClaude(buildSystemPrompt(commentType, selectedComps, responseLength), userPrompt, apiKey);
+    loadingEl.remove();
+
+    const parts = result.split(/\n---+\n/).map(p => p.trim()).filter(Boolean);
+    history.unshift({ type: typeLabel, thread: thread.slice(0, 55) + (thread.length > 55 ? '…' : ''), parts });
+    renderHistory();
+
+    parts.forEach((text, i) => {
+      outputBody.insertBefore(createCommentCard(text, typeLabel, i + 1, parts.length), outputBody.firstChild);
+    });
+
+  } catch (err) {
+    loadingEl.remove();
+    showError(err.message);
+  }
+
+  generating = false;
+  document.getElementById('generateBtn').disabled = false;
+}
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function createCommentCard(text, typeLabel, idx, total) {
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const card = document.createElement('div');
+  card.className = 'comment-card';
+  card.innerHTML = `
+    <div class="comment-card-header">
+      <span class="badge">${typeLabel}</span>
+      <span class="word-count">${wordCount} words${total > 1 ? ' · v' + idx : ''}</span>
+    </div>
+    <div class="comment-text">${escapeHtml(text)}</div>
+    <div class="comment-footer">
+      <button class="btn-sm copy-btn" onclick="copyComment(this, ${JSON.stringify(text)})">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+        </svg>
+        Copy
+      </button>
+      <button class="btn-sm" onclick="dismissCard(this)">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        Dismiss
+      </button>
+    </div>`;
+  return card;
+}
+
+function copyComment(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
+    }, 2000);
+  });
+}
+
+function dismissCard(btn) {
+  btn.closest('.comment-card').remove();
+  checkEmpty();
+}
+
+function clearOutput() {
+  document.getElementById('outputBody').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">✍️</div>
+      <p>Paste a Reddit thread on the left and hit Generate to draft your comment.</p>
+    </div>`;
+}
+
+function checkEmpty() {
+  const ob = document.getElementById('outputBody');
+  if (!ob.querySelector('.comment-card')) clearOutput();
+}
+
+function showError(msg) {
+  const ob = document.getElementById('outputBody');
+  const emptyState = ob.querySelector('.empty-state');
+  if (emptyState) emptyState.remove();
+  const err = document.createElement('div');
+  err.className = 'error-card';
+  err.textContent = '⚠ ' + msg;
+  ob.insertBefore(err, ob.firstChild);
+  setTimeout(() => { err.remove(); checkEmpty(); }, 6000);
+}
+
+function renderHistory() {
+  const strip = document.getElementById('historyStrip');
+  strip.innerHTML = '<span class="history-label">History:</span>';
+  history.slice(0, 8).forEach(h => {
+    const pill = document.createElement('div');
+    pill.className = 'history-pill';
+    pill.textContent = h.thread;
+    pill.title = h.type;
+    strip.appendChild(pill);
+  });
+}
+
+function escapeHtml(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+// If already unlocked this session, skip lock screen
+if (sessionStorage.getItem('hn_unlocked') === '1') {
+  document.getElementById('lockScreen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  updateApiStatus();
+}
+
+// Track unlock across page refreshes within the same tab session
+const _origUnlock = unlock;
+unlock = function() {
+  const input = document.getElementById('lockInput');
+  if (input.value.trim() === getAccessCode()) {
+    sessionStorage.setItem('hn_unlocked', '1');
+  }
+  _origUnlock();
+};
+</script>
+</body>
+</html>
