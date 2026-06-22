@@ -335,19 +335,7 @@
   }
   .settings-btn:hover { color: var(--text); border-color: var(--accent); }
 
-  .api-status {
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--muted);
-  }
-  .status-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--border);
-  }
-  .status-dot.connected { background: var(--green); }
+  .api-status { display: none; }
 
   /* ── Layout ── */
   .workspace {
@@ -711,18 +699,6 @@
     </div>
     <div class="settings-body">
 
-      <!-- API Key -->
-      <div class="settings-field">
-        <label>Claude API Key</label>
-        <div class="settings-input-row">
-          <input class="settings-input" type="password" id="settingsApiKey" placeholder="sk-ant-..." />
-          <button class="btn-sm" onclick="toggleApiVis()" id="visBtn" style="white-space:nowrap;padding:0 14px;">Show</button>
-        </div>
-        <p>Get yours at console.anthropic.com → API Keys. Saved locally in your browser — never sent anywhere except Anthropic.</p>
-      </div>
-
-      <div class="divider"></div>
-
       <!-- Access Code -->
       <div class="settings-field">
         <label>Change User Access Code</label>
@@ -985,12 +961,8 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  const apiKey   = document.getElementById('settingsApiKey').value.trim();
   const newCode  = document.getElementById('settingsNewCode').value.trim();
   const newAdmin = document.getElementById('settingsNewAdmin').value.trim();
-
-  if (apiKey) localStorage.setItem('hn_api_key', apiKey);
-  else localStorage.removeItem('hn_api_key');
 
   if (newCode)  localStorage.setItem('hn_access_code', newCode);
   if (newAdmin) localStorage.setItem('hn_admin_code', newAdmin);
@@ -1005,30 +977,7 @@ function saveSettings() {
   }, 1200);
 }
 
-function toggleApiVis() {
-  const inp = document.getElementById('settingsApiKey');
-  const btn = document.getElementById('visBtn');
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    btn.textContent = 'Hide';
-  } else {
-    inp.type = 'password';
-    btn.textContent = 'Show';
-  }
-}
-
-function updateApiStatus() {
-  const key = localStorage.getItem('hn_api_key');
-  const dot = document.getElementById('statusDot');
-  const label = document.getElementById('statusLabel');
-  if (key && key.startsWith('sk-')) {
-    dot.classList.add('connected');
-    label.textContent = 'API key connected';
-  } else {
-    dot.classList.remove('connected');
-    label.textContent = 'No API key — open Settings';
-  }
-}
+function updateApiStatus() {}
 
 // Close modal on backdrop click
 document.getElementById('settingsModal').addEventListener('click', function(e) {
@@ -1237,31 +1186,25 @@ ${typeInstructions}`;
 }
 
 // ══════════════════════════════════════
-// API
+// API — calls our server proxy, never Anthropic directly
 // ══════════════════════════════════════
-async function callClaude(systemPrompt, userPrompt, apiKey) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+async function callClaude(systemPrompt, userPrompt) {
+  const res = await fetch('/api/generate', {
     method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-opus-4-5',
-      max_tokens: 900,
+      accessCode: getAccessCode(),
       system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    })
+      prompt: userPrompt,
+    }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `API error ${res.status}`);
+    throw new Error(err?.error || `Server error ${res.status}`);
   }
   const data = await res.json();
-  return data.content?.[0]?.text?.trim() || '';
+  return data.text || '';
 }
 
 // ══════════════════════════════════════
@@ -1272,10 +1215,8 @@ async function generate() {
 
   const thread = document.getElementById('threadInput').value.trim();
   const extra = document.getElementById('extraContext').value.trim();
-  const apiKey = localStorage.getItem('hn_api_key') || '';
 
   if (!thread) { showError('Paste a Reddit thread or describe the question first.'); return; }
-  if (!apiKey) { showError('Add your Claude API key in Settings (top right).'); return; }
 
   generating = true;
   document.getElementById('generateBtn').disabled = true;
@@ -1299,7 +1240,7 @@ Draft ${variants} Reddit comment${variants > 1 ? 's' : ''} for this thread.${var
   outputBody.insertBefore(loadingEl, outputBody.firstChild);
 
   try {
-    const result = await callClaude(buildSystemPrompt(commentType, selectedComps, responseLength), userPrompt, apiKey);
+    const result = await callClaude(buildSystemPrompt(commentType, selectedComps, responseLength), userPrompt);
     loadingEl.remove();
 
     const parts = result.split(/\n---+\n/).map(p => p.trim()).filter(Boolean);
