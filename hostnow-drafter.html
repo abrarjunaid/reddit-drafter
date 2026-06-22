@@ -1333,20 +1333,50 @@ function createCommentCard(text, typeLabel, idx, total) {
     </div>
     <div class="comment-text">${escapeHtml(text)}</div>
     <div class="comment-footer">
-      <button class="btn-sm copy-btn" onclick="copyComment(this, ${JSON.stringify(text)})">
+      <button class="btn-sm copy-btn">
         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
           <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
         </svg>
         Copy
       </button>
-      <button class="btn-sm" onclick="dismissCard(this)">
+      <button class="btn-sm dismiss-btn">
         <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
         Dismiss
       </button>
     </div>`;
+
+  // Attach events directly — avoids inline onclick escaping issues
+  card.querySelector('.copy-btn').addEventListener('click', function() {
+    navigator.clipboard.writeText(text).then(() => {
+      this.classList.add('copied');
+      this.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+      setTimeout(() => {
+        this.classList.remove('copied');
+        this.innerHTML = `<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`;
+      }, 2000);
+    }).catch(() => {
+      // Fallback for non-HTTPS or denied clipboard
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      this.textContent = 'Copied!';
+      setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+    });
+  });
+
+  card.querySelector('.dismiss-btn').addEventListener('click', function() {
+    card.remove();
+    checkEmpty();
+  });
+
   return card;
 }
 
